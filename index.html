@@ -6,7 +6,8 @@
 <title>Astro Chat (Realtime)</title>
 
 <!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">};
+</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
@@ -102,6 +103,8 @@ body {
 </div>
 
 <script>
+// FIX: ensure Firebase loads before anything
+window.onload = () => {
 // 🔥 PASTE YOUR FIREBASE CONFIG HERE
 const firebaseConfig = {
   apiKey: "AIzaSyC-tWfooosC689hzDUC4S5CXL7dJ3yANuc",
