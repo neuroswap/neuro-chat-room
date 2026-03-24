@@ -13,6 +13,8 @@ body{
   font-family:sans-serif;
   background:#0f0f0f;
   color:white;
+  overflow:hidden;
+  cursor:none;
 }
 
 /* LOGIN */
@@ -24,24 +26,37 @@ body{
   text-align:center;
 }
 
-/* LAYOUT */
-#chat{display:none;height:100vh}
-
+/* SIDEBAR */
 #rooms{
   width:160px;
   background:#111;
   height:100%;
   float:left;
   padding:10px;
-  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
 .room{
   padding:10px;
+  border-radius:8px;
   cursor:pointer;
-  border-radius:6px;
 }
 .room:hover{background:#222}
+
+.addGroup{
+  margin-top:auto;
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:#ff0077;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:24px;
+  cursor:pointer;
+}
 
 /* MAIN */
 #main{
@@ -91,19 +106,26 @@ body{
   border:none;
 }
 
-/* SETTINGS */
-#settings{
-  position:fixed;
-  right:10px;
-  bottom:10px;
+/* CURSOR */
+.cursor{
+  position:absolute;
+  width:10px;
+  height:10px;
+  background:#fff;
+  border-radius:50%;
+  pointer-events:none;
+  mix-blend-mode:difference;
+  z-index:999;
 }
 
-button{
-  padding:6px 10px;
-  margin:2px;
-  border:none;
-  background:#ff0077;
-  color:white;
+/* BG */
+canvas{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:-1;
 }
 </style>
 </head>
@@ -116,15 +138,12 @@ button{
   <button onclick="join()">Join</button>
 </div>
 
-<div id="chat">
+<div id="chat" style="display:none">
 
 <div id="rooms">
-  <div class="room" onclick="switchRoom('general')">General</div>
-  <div class="room" onclick="switchRoom('trading')">Trading</div>
-  <div class="room" onclick="switchRoom('gaming')">Gaming</div>
-  <hr>
-  <button onclick="createGroup()">+ Group</button>
+  <div class="room" onclick="switchRoom('main')">Main Group</div>
   <div id="groups"></div>
+  <div class="addGroup" onclick="createGroup()">+</div>
 </div>
 
 <div id="main">
@@ -144,9 +163,8 @@ button{
 
 </div>
 
-<div id="settings">
-  🎨 <input type="color" onchange="theme(this.value)">
-</div>
+<div class="cursor" id="cursor"></div>
+<canvas id="bg"></canvas>
 
 <script>
 firebase.initializeApp({
@@ -157,11 +175,11 @@ firebase.initializeApp({
 const db=firebase.database();
 
 let user="";
-let room="general";
+let currentRoom="main";
 
-// FONT CONVERTER 🔥
+// FONT
 function toFullWidth(str){
-  return str.replace(/[A-Za-z0-9 ]/g, c=>{
+  return str.replace(/[A-Za-z0-9 ]/g,c=>{
     if(c===" ") return "　";
     return String.fromCharCode(c.charCodeAt(0)+65248);
   });
@@ -174,10 +192,8 @@ if(localStorage.getItem("user")){
 }
 
 function join(){
-  user=document.getElementById("user").value;
+  user=toFullWidth(document.getElementById("user").value);
   if(!user)return;
-
-  user=toFullWidth(user);
 
   localStorage.setItem("user",user);
   start();
@@ -192,7 +208,6 @@ function start(){
   loadGroups();
 }
 
-// LOGOUT
 function logout(){
   localStorage.removeItem("user");
   location.reload();
@@ -218,7 +233,7 @@ function send(){
     db.ref("dms/"+user+"_"+target).push({user,text:"(DM) "+msg});
     db.ref("dms/"+target+"_"+user).push({user,text:"(DM) "+msg});
   }else{
-    db.ref("rooms/"+room).push({user,text});
+    db.ref("rooms/"+currentRoom).push({user,text});
   }
 
   document.getElementById("msg").value="";
@@ -226,7 +241,7 @@ function send(){
 
 // LOAD
 function load(){
-  db.ref("rooms/"+room).on("value",snap=>{
+  db.ref("rooms/"+currentRoom).on("value",snap=>{
     let box=document.getElementById("messages");
     box.innerHTML="";
 
@@ -247,18 +262,31 @@ function load(){
 
 // DM CLICK
 function startDM(target){
-  document.getElementById("msg").value = "／ｄｍ "+target+" ";
+  document.getElementById("msg").value="／ｄｍ "+target+" ";
 }
 
 // GROUPS
 function createGroup(){
-  let name=prompt("Group name:");
-  if(!name)return;
+  db.ref("userGroups/"+user).once("value").then(s=>{
+    if(s.exists()){
+      alert("you already made a group");
+      return;
+    }
 
-  name=toFullWidth(name);
+    let name=prompt("Group name:");
+    if(!name)return;
 
-  let id="group_"+Date.now();
-  db.ref("groups/"+id).set({name});
+    name=toFullWidth(name);
+
+    let id="group_"+Date.now();
+
+    db.ref("groups/"+id).set({
+      name,
+      owner:user
+    });
+
+    db.ref("userGroups/"+user).set(id);
+  });
 }
 
 function loadGroups(){
@@ -269,26 +297,72 @@ function loadGroups(){
     let data=snap.val();
     for(let id in data){
       let g=data[id];
-      box.innerHTML+=`<div class="room" onclick="switchRoom('${id}')">${g.name}</div>`;
+
+      box.innerHTML+=`
+      <div class="room" onclick="switchRoom('${id}')">
+        ${g.name}
+        ${g.owner===user ? `<span onclick="deleteGroup('${id}')"> ❌</span>` : ""}
+      </div>`;
     }
   });
 }
 
-// SWITCH ROOM
+function deleteGroup(id){
+  db.ref("groups/"+id).remove();
+  db.ref("rooms/"+id).remove();
+  db.ref("userGroups/"+user).remove();
+  switchRoom("main");
+}
+
+// SWITCH
 function switchRoom(r){
-  room=r;
+  currentRoom=r;
   load();
 }
 
-// THEME
-function theme(c){
-  document.body.style.background=c;
-  localStorage.setItem("theme",c);
+// CURSOR
+const cursor=document.getElementById("cursor");
+document.addEventListener("mousemove",e=>{
+  cursor.style.left=e.clientX+"px";
+  cursor.style.top=e.clientY+"px";
+});
+
+// BG
+const canvas=document.getElementById("bg");
+const ctx=canvas.getContext("2d");
+canvas.width=innerWidth;
+canvas.height=innerHeight;
+
+let particles=[];
+for(let i=0;i<120;i++){
+  particles.push({
+    x:Math.random()*canvas.width,
+    y:Math.random()*canvas.height,
+    vx:(Math.random()-0.5)*0.5,
+    vy:(Math.random()-0.5)*0.5,
+    size:Math.random()*2
+  });
 }
 
-if(localStorage.getItem("theme")){
-  document.body.style.background=localStorage.getItem("theme");
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  particles.forEach(p=>{
+    p.x+=p.vx;
+    p.y+=p.vy;
+
+    if(p.x<0||p.x>canvas.width)p.vx*=-1;
+    if(p.y<0||p.y>canvas.height)p.vy*=-1;
+
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    ctx.fillStyle="#fff";
+    ctx.fill();
+  });
+
+  requestAnimationFrame(animate);
 }
+animate();
 </script>
 
 </body>
