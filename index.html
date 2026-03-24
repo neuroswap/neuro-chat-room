@@ -13,88 +13,50 @@ body{
   font-family:sans-serif;
   background:#0f0f0f;
   color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
   overflow:hidden;
   cursor:none;
 }
 
-/* TITLE */
-.title{
-  font-size:3rem;
-  text-align:center;
-  background:linear-gradient(90deg,#ff00ff,#00ffff,#ff0077);
-  -webkit-background-clip:text;
-  color:transparent;
-  text-shadow:0 0 20px #ff00ff;
-  animation:shine 4s linear infinite;
-}
-.subtitle{
-  text-align:center;
-  color:#aaa;
-  margin-bottom:20px;
-}
-
-@keyframes shine{
-  0%{filter:hue-rotate(0)}
-  100%{filter:hue-rotate(360deg)}
-}
-
-/* TOP BAR */
-#topBar{
-  position:fixed;
-  top:0;
-  width:100%;
+/* CARD UI */
+.container{
+  width:90%;
+  max-width:900px;
+  height:90vh;
   background:#111;
+  border-radius:20px;
+  overflow:hidden;
   display:flex;
-  justify-content:space-between;
-  padding:10px;
-  z-index:5;
-}
-
-button{
-  background:#ff0077;
-  border:none;
-  color:white;
-  padding:6px 10px;
-  border-radius:6px;
+  flex-direction:column;
+  box-shadow:0 0 30px rgba(0,0,0,0.6);
 }
 
 /* LOGIN */
 #login{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
+  text-align:center;
 }
 
-/* SIDEBAR */
-#rooms{
-  width:160px;
-  background:#111;
-  height:100%;
-  padding-top:60px;
-  float:left;
+.title{
+  font-size:2.5rem;
+  background:linear-gradient(90deg,#ff00ff,#00ffff);
+  -webkit-background-clip:text;
+  color:transparent;
 }
 
-.room{padding:10px;cursor:pointer}
-.room:hover{background:#222}
-
-.addGroup{
-  margin:10px;
-  width:40px;height:40px;
-  border-radius:50%;
-  background:#ff0077;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;
+/* TOP */
+.top{
+  display:flex;
+  justify-content:space-between;
+  padding:10px;
+  background:#1a1a1a;
 }
 
-/* MAIN */
-#main{
-  margin-left:160px;
-  margin-top:50px;
-}
-
+/* CHAT */
 #messages{
-  height:70vh;
+  flex:1;
   overflow:auto;
   padding:10px;
 }
@@ -102,49 +64,59 @@ button{
 .msg{
   display:flex;
   gap:10px;
-  background:#1a1a1a;
+  background:#222;
   margin:5px;
-  padding:8px;
-  border-radius:8px;
-}
-
-.msg img{
-  width:30px;
-  border-radius:50%;
-  cursor:pointer;
+  padding:10px;
+  border-radius:12px;
 }
 
 /* INPUT */
 #input{
-  position:fixed;
-  bottom:0;
-  left:160px;
-  right:0;
+  display:flex;
 }
-
 #input input{
-  width:100%;
-  padding:12px;
+  flex:1;
+  padding:10px;
   border:none;
+  border-radius:0 0 0 20px;
 }
 
-/* ADMIN PANEL */
-#adminPanel{
-  position:fixed;
-  right:10px;
-  top:70px;
-  background:#111;
+/* SIDEBAR */
+.sidebar{
+  position:absolute;
+  left:20px;
+  top:50%;
+  transform:translateY(-50%);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.room{
   padding:10px;
-  display:none;
+  background:#111;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+.add{
+  width:40px;height:40px;
+  border-radius:50%;
+  background:#ff0077;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
 }
 
 /* SETTINGS */
 #settings{
-  position:fixed;
-  right:10px;
-  top:150px;
+  position:absolute;
+  right:20px;
+  top:20px;
   background:#111;
   padding:10px;
+  border-radius:10px;
   display:none;
 }
 
@@ -163,7 +135,6 @@ button{
 canvas{
   position:fixed;
   top:0;left:0;
-  width:100%;height:100%;
   z-index:-1;
 }
 </style>
@@ -171,50 +142,43 @@ canvas{
 
 <body>
 
+<div class="container">
+
 <div id="login">
   <h1 class="title">WELCOME TO NEURO-CHAT!</h1>
-  <p class="subtitle">made by zay :)</p>
-  <input id="user"><br>
+  <p>made by zay :)</p>
+
+  <input id="user" placeholder="Username">
   <button onclick="join()">Join</button>
 </div>
 
 <div id="chat" style="display:none">
 
-<div id="topBar">
+<div class="top">
+  <span id="me"></span>
   <div>
-    <button onclick="switchRoom('main')">Home</button>
     <button onclick="toggleSettings()">⚙️</button>
+    <button onclick="logout()">Logout</button>
   </div>
-  <div id="me"></div>
-  <button onclick="logout()">Logout</button>
 </div>
 
-<div id="rooms">
-  <div class="room" onclick="switchRoom('main')">Main Group</div>
-  <div id="groups"></div>
-  <div class="addGroup" onclick="createGroup()">+</div>
-</div>
-
-<div id="main">
-  <div id="messages"></div>
-</div>
+<div id="messages"></div>
 
 <div id="input">
-  <input id="msg" placeholder="press enter to send">
+  <input id="msg" placeholder="type & press enter">
 </div>
 
 </div>
 
-<div id="adminPanel">
-  <h4>Admin</h4>
-  <input id="target"><br>
-  <button onclick="ban()">Ban</button>
-  <button onclick="mute()">Mute</button>
-  <button onclick="clearChat()">Clear</button>
+</div>
+
+<div class="sidebar">
+  <div class="room" onclick="switchRoom('main')">Main</div>
+  <div id="groups"></div>
+  <div class="add" onclick="createGroup()">+</div>
 </div>
 
 <div id="settings">
-  <h4>Theme</h4>
   <input type="color" onchange="bgColor=this.value">
   <input type="color" onchange="particleColor=this.value">
 </div>
@@ -230,35 +194,35 @@ firebase.initializeApp({
 const db=firebase.database();
 
 let user="";
-let currentRoom="main";
+let room="main";
 let particleColor="#fff";
 
-// FONT
-function toFullWidth(str){
-  return str.replace(/[A-Za-z0-9 ]/g,c=>{
-    if(c===" ") return "　";
-    return String.fromCharCode(c.charCodeAt(0)+65248);
+// USER SYSTEM
+function join(){
+  let name=document.getElementById("user").value;
+
+  db.ref("users/"+name).once("value").then(s=>{
+    if(s.exists() && localStorage.getItem("user")!==name){
+      alert("username taken try again");
+      return;
+    }
+
+    db.ref("users/"+name).set(true);
+    user=name;
+    localStorage.setItem("user",user);
+    start();
   });
 }
 
-// JOIN
-function join(){
-  user=toFullWidth(document.getElementById("user").value);
-  localStorage.setItem("user",user);
+if(localStorage.getItem("user")){
+  user=localStorage.getItem("user");
   start();
 }
 
-// START
 function start(){
-  user=localStorage.getItem("user");
   document.getElementById("login").style.display="none";
   document.getElementById("chat").style.display="block";
   document.getElementById("me").innerText=user;
-
-  // ADMIN FIX
-  if(user==="ｚａｙ　（ｎｅｕｒｏ）" || user==="zay (neuro)"){
-    document.getElementById("adminPanel").style.display="block";
-  }
 
   load();
   loadGroups();
@@ -267,57 +231,32 @@ function start(){
 // SEND
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter"){
-    let text=toFullWidth(document.getElementById("msg").value);
-
-    if(text.startsWith("／ｄｍ")){
-      let parts=text.split(" ");
-      let t=parts[1];
-      let m=parts.slice(2).join(" ");
-
-      db.ref("dms/"+user+"_"+t).push({user,text:m});
-      db.ref("dms/"+t+"_"+user).push({user,text:m});
-    }else{
-      db.ref("rooms/"+currentRoom).push({user,text});
-    }
-
+    let t=document.getElementById("msg").value;
+    db.ref("rooms/"+room).push({user,text:t});
     document.getElementById("msg").value="";
   }
 });
 
 // LOAD
 function load(){
-  db.ref("rooms/"+currentRoom).on("value",snap=>{
+  db.ref("rooms/"+room).on("value",snap=>{
     let box=document.getElementById("messages");
     box.innerHTML="";
     let data=snap.val();
 
     for(let id in data){
       let m=data[id];
-      box.innerHTML+=`
-      <div class="msg">
-        <img src="https://api.dicebear.com/7.x/initials/svg?seed=${m.user}" onclick="dm('${m.user}')">
-        <b>${m.user}</b>: ${m.text}
-      </div>`;
+      box.innerHTML+=`<div class="msg"><b>${m.user}</b>: ${m.text}</div>`;
     }
   });
 }
 
-// DM CLICK
-function dm(u){
-  document.getElementById("msg").value="／ｄｍ "+u+" ";
-}
-
 // GROUPS
 function createGroup(){
-  db.ref("userGroups/"+user).once("value").then(s=>{
-    if(s.exists()) return alert("1 group only");
-
-    let name=toFullWidth(prompt("name"));
-    let id="group_"+Date.now();
-
-    db.ref("groups/"+id).set({name,owner:user});
-    db.ref("userGroups/"+user).set(id);
-  });
+  let name=prompt("Group name:");
+  if(!name)return;
+  let id="g_"+Date.now();
+  db.ref("groups/"+id).set({name});
 }
 
 function loadGroups(){
@@ -327,32 +266,13 @@ function loadGroups(){
     let data=snap.val();
 
     for(let id in data){
-      let g=data[id];
-      box.innerHTML+=`
-      <div class="room" onclick="switchRoom('${id}')">
-        ${g.name}
-        ${g.owner===user?`❌`:``}
-      </div>`;
+      box.innerHTML+=`<div class="room" onclick="switchRoom('${id}')">${data[id].name}</div>`;
     }
   });
 }
 
-// ADMIN
-function ban(){
-  let t=document.getElementById("target").value;
-  db.ref("banned/"+t).set(true);
-}
-function mute(){
-  let t=document.getElementById("target").value;
-  db.ref("muted/"+t).set(true);
-}
-function clearChat(){
-  db.ref("rooms/"+currentRoom).remove();
-}
-
-// SWITCH
 function switchRoom(r){
-  currentRoom=r;
+  room=r;
   load();
 }
 
@@ -382,7 +302,7 @@ canvas.width=innerWidth;
 canvas.height=innerHeight;
 
 let particles=[];
-for(let i=0;i<120;i++){
+for(let i=0;i<100;i++){
   particles.push({
     x:Math.random()*canvas.width,
     y:Math.random()*canvas.height,
@@ -397,9 +317,6 @@ function animate(){
   particles.forEach(p=>{
     p.x+=p.vx;
     p.y+=p.vy;
-
-    if(p.x<0||p.x>canvas.width)p.vx*=-1;
-    if(p.y<0||p.y>canvas.height)p.vy*=-1;
 
     ctx.beginPath();
     ctx.arc(p.x,p.y,2,0,Math.PI*2);
