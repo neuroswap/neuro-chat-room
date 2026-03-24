@@ -1,40 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Neuro Chat</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
-<script src="https://kit.fontawesome.com/a076d05399.js"></script>
-
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
 body{
-  font-family:Poppins;
+  margin:0;
+  font-family:sans-serif;
   background:#0f0f0f;
   color:white;
-  overflow:hidden;
-  cursor:none;
-}
-
-/* 3D TITLE */
-.title{
-  font-size:3rem;
-  text-align:center;
-  background:linear-gradient(90deg,#ff00ff,#00ffff,#ff0077);
-  -webkit-background-clip:text;
-  color:transparent;
-  animation:shine 3s linear infinite;
-  text-shadow:0 0 20px rgba(255,0,255,0.6);
-}
-
-@keyframes shine{
-  0%{filter:hue-rotate(0deg)}
-  100%{filter:hue-rotate(360deg)}
 }
 
 /* LOGIN */
@@ -44,85 +22,88 @@ body{
   left:50%;
   transform:translate(-50%,-50%);
   text-align:center;
-  z-index:2;
 }
 
-input{
-  padding:12px;
-  margin:10px;
-  border:none;
-  border-radius:8px;
+/* LAYOUT */
+#chat{display:none;height:100vh}
+
+#rooms{
+  width:160px;
+  background:#111;
+  height:100%;
+  float:left;
+  padding:10px;
+  overflow:auto;
 }
 
-button{
-  padding:12px 20px;
-  background:linear-gradient(90deg,#ff00ff,#ff0077);
-  border:none;
-  border-radius:8px;
-  color:white;
+.room{
+  padding:10px;
   cursor:pointer;
+  border-radius:6px;
+}
+.room:hover{background:#222}
+
+/* MAIN */
+#main{
+  margin-left:160px;
 }
 
-/* CHAT */
-#chat{display:none;z-index:2;position:relative}
+#top{
+  padding:10px;
+  background:#111;
+  display:flex;
+  justify-content:space-between;
+}
 
 #messages{
   height:75vh;
   overflow:auto;
-  padding:15px;
+  padding:10px;
 }
 
 .msg{
+  display:flex;
+  align-items:center;
+  gap:10px;
   background:#1a1a1a;
-  padding:10px;
   margin:5px;
-  border-radius:10px;
+  padding:8px;
+  border-radius:8px;
+}
+
+.msg img{
+  width:30px;
+  border-radius:50%;
+  cursor:pointer;
 }
 
 /* INPUT */
-#inputBox{
+#input{
   position:fixed;
   bottom:0;
+  left:160px;
+  right:0;
+}
+
+#input input{
   width:100%;
-  display:flex;
+  padding:12px;
+  border:none;
 }
 
-#inputBox input{
-  flex:1;
-}
-
-/* YOUTUBE */
-#side{
+/* SETTINGS */
+#settings{
   position:fixed;
-  right:15px;
-  top:50%;
+  right:10px;
+  bottom:10px;
 }
 
-#side i{
-  font-size:30px;
-  color:red;
-}
-
-/* CURSOR */
-.cursor{
-  position:absolute;
-  width:10px;
-  height:10px;
-  background:#fff;
-  border-radius:50%;
-  pointer-events:none;
-  mix-blend-mode:difference;
-  z-index:3;
-}
-
-/* PARTICLES */
-canvas{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  z-index:1;
+button{
+  padding:6px 10px;
+  margin:2px;
+  border:none;
+  background:#ff0077;
+  color:white;
 }
 </style>
 </head>
@@ -130,133 +111,184 @@ canvas{
 <body>
 
 <div id="login">
-  <h1 class="title">Neuro Chat</h1>
-  <p>made by zay :)</p>
-
-  <input id="user" placeholder="Enter username">
-  <br>
+  <h2>Neuro Chat</h2>
+  <input id="user" placeholder="Username"><br>
   <button onclick="join()">Join</button>
 </div>
 
 <div id="chat">
-  <h3 id="me"></h3>
 
-  <div id="messages"></div>
-
-  <div id="inputBox">
-    <input id="msg">
-    <button onclick="send()">Send</button>
-  </div>
-
-  <div id="side">
-    <a href="https://youtube.com/@zay-bear-185" target="_blank">
-      <i class="fab fa-youtube"></i>
-    </a>
-  </div>
+<div id="rooms">
+  <div class="room" onclick="switchRoom('general')">General</div>
+  <div class="room" onclick="switchRoom('trading')">Trading</div>
+  <div class="room" onclick="switchRoom('gaming')">Gaming</div>
+  <hr>
+  <button onclick="createGroup()">+ Group</button>
+  <div id="groups"></div>
 </div>
 
-<div class="cursor" id="cursor"></div>
-<canvas id="bg"></canvas>
+<div id="main">
+
+<div id="top">
+  <span id="me"></span>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<div id="messages"></div>
+
+</div>
+
+<div id="input">
+  <input id="msg" placeholder="type and press enter">
+</div>
+
+</div>
+
+<div id="settings">
+  🎨 <input type="color" onchange="theme(this.value)">
+</div>
 
 <script>
-// FIREBASE
 firebase.initializeApp({
-  apiKey:"AIzaSyC-tWfooosC689hzDUC4S5CXL7dJ3yANuc",
+  apiKey:"AIzaSy...",
   databaseURL:"https://neuro-chat-8fe18-default-rtdb.firebaseio.com"
 });
 
 const db=firebase.database();
-let username="";
+
+let user="";
+let room="general";
+
+// FONT CONVERTER 🔥
+function toFullWidth(str){
+  return str.replace(/[A-Za-z0-9 ]/g, c=>{
+    if(c===" ") return "　";
+    return String.fromCharCode(c.charCodeAt(0)+65248);
+  });
+}
 
 // AUTO LOGIN
 if(localStorage.getItem("user")){
-  username=localStorage.getItem("user");
+  user=localStorage.getItem("user");
   start();
 }
 
-// JOIN
 function join(){
-  username=document.getElementById("user").value;
-  if(!username)return;
+  user=document.getElementById("user").value;
+  if(!user)return;
 
-  localStorage.setItem("user",username);
+  user=toFullWidth(user);
+
+  localStorage.setItem("user",user);
   start();
 }
 
-// START CHAT
 function start(){
   document.getElementById("login").style.display="none";
   document.getElementById("chat").style.display="block";
-  document.getElementById("me").innerText=username;
+  document.getElementById("me").innerText=user;
 
   load();
+  loadGroups();
 }
+
+// LOGOUT
+function logout(){
+  localStorage.removeItem("user");
+  location.reload();
+}
+
+// ENTER SEND
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter") send();
+});
 
 // SEND
 function send(){
   let text=document.getElementById("msg").value;
   if(!text)return;
 
-  db.ref("messages").push({user:username,text});
+  text=toFullWidth(text);
+
+  if(text.startsWith("／ｄｍ")){
+    let parts=text.split(" ");
+    let target=parts[1];
+    let msg=parts.slice(2).join(" ");
+
+    db.ref("dms/"+user+"_"+target).push({user,text:"(DM) "+msg});
+    db.ref("dms/"+target+"_"+user).push({user,text:"(DM) "+msg});
+  }else{
+    db.ref("rooms/"+room).push({user,text});
+  }
+
   document.getElementById("msg").value="";
 }
 
 // LOAD
 function load(){
-  db.ref("messages").on("value",snap=>{
-    let data=snap.val();
+  db.ref("rooms/"+room).on("value",snap=>{
     let box=document.getElementById("messages");
     box.innerHTML="";
 
+    let data=snap.val();
     for(let id in data){
       let m=data[id];
-      box.innerHTML+=`<div class='msg'>${m.user}: ${m.text}</div>`;
+
+      box.innerHTML+=`
+      <div class="msg">
+        <img src="https://api.dicebear.com/7.x/initials/svg?seed=${m.user}" onclick="startDM('${m.user}')">
+        <b>${m.user}</b>: ${m.text}
+      </div>`;
     }
 
     box.scrollTop=box.scrollHeight;
   });
 }
 
-// CURSOR
-const cursor=document.getElementById("cursor");
-document.addEventListener("mousemove",e=>{
-  cursor.style.left=e.clientX+"px";
-  cursor.style.top=e.clientY+"px";
-});
+// DM CLICK
+function startDM(target){
+  document.getElementById("msg").value = "／ｄｍ "+target+" ";
+}
 
-// PARTICLES
-const canvas=document.getElementById("bg");
-const ctx=canvas.getContext("2d");
-canvas.width=innerWidth;
-canvas.height=innerHeight;
+// GROUPS
+function createGroup(){
+  let name=prompt("Group name:");
+  if(!name)return;
 
-let particles=[];
-for(let i=0;i<120;i++){
-  particles.push({
-    x:Math.random()*canvas.width,
-    y:Math.random()*canvas.height,
-    vx:(Math.random()-0.5)*0.5,
-    vy:(Math.random()-0.5)*0.5,
-    size:Math.random()*2
+  name=toFullWidth(name);
+
+  let id="group_"+Date.now();
+  db.ref("groups/"+id).set({name});
+}
+
+function loadGroups(){
+  db.ref("groups").on("value",snap=>{
+    let box=document.getElementById("groups");
+    box.innerHTML="";
+
+    let data=snap.val();
+    for(let id in data){
+      let g=data[id];
+      box.innerHTML+=`<div class="room" onclick="switchRoom('${id}')">${g.name}</div>`;
+    }
   });
 }
 
-function animate(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  particles.forEach(p=>{
-    p.x+=p.vx;
-    p.y+=p.vy;
-    if(p.x<0||p.x>canvas.width)p.vx*=-1;
-    if(p.y<0||p.y>canvas.height)p.vy*=-1;
-
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,p.size,0,6.28);
-    ctx.fillStyle="#fff";
-    ctx.fill();
-  });
-  requestAnimationFrame(animate);
+// SWITCH ROOM
+function switchRoom(r){
+  room=r;
+  load();
 }
-animate();
+
+// THEME
+function theme(c){
+  document.body.style.background=c;
+  localStorage.setItem("theme",c);
+}
+
+if(localStorage.getItem("theme")){
+  document.body.style.background=localStorage.getItem("theme");
+}
 </script>
 
 </body>
