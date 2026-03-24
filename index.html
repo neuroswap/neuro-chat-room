@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Astro Chat</title>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<!-- Firebase (WORKING VERSION) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
 body {
@@ -67,10 +67,6 @@ body {
   border: none;
 }
 
-#inputBox button {
-  padding: 10px;
-}
-
 button {
   background: #ff4d6d;
   border: none;
@@ -91,11 +87,6 @@ button:hover {
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-}
-
-#side a {
-  color: white;
-  text-decoration: none;
 }
 
 #admin {
