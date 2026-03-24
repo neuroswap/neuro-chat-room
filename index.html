@@ -13,111 +13,73 @@ body{
   font-family:sans-serif;
   background:#0f0f0f;
   color:white;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
   overflow:hidden;
   cursor:none;
 }
 
-/* CARD UI */
-.container{
-  width:90%;
-  max-width:900px;
-  height:90vh;
-  background:#111;
-  border-radius:20px;
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
-  box-shadow:0 0 30px rgba(0,0,0,0.6);
-}
-
-/* LOGIN */
+/* LOGIN CENTER */
 #login{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
   text-align:center;
 }
 
+/* TITLE */
 .title{
   font-size:2.5rem;
   background:linear-gradient(90deg,#ff00ff,#00ffff);
   -webkit-background-clip:text;
   color:transparent;
-}
-
-/* TOP */
-.top{
-  display:flex;
-  justify-content:space-between;
-  padding:10px;
-  background:#1a1a1a;
+  margin-bottom:10px;
 }
 
 /* CHAT */
+#chat{
+  display:none;
+}
+
+/* TOP BAR */
+#top{
+  position:fixed;
+  top:0;
+  width:100%;
+  background:#111;
+  padding:10px;
+  display:flex;
+  justify-content:space-between;
+}
+
+/* MESSAGES */
 #messages{
-  flex:1;
+  position:absolute;
+  top:50px;
+  bottom:60px;
+  left:0;
+  right:0;
   overflow:auto;
   padding:10px;
 }
 
 .msg{
-  display:flex;
-  gap:10px;
-  background:#222;
-  margin:5px;
+  background:#1a1a1a;
   padding:10px;
+  margin:5px;
   border-radius:12px;
 }
 
 /* INPUT */
 #input{
-  display:flex;
+  position:fixed;
+  bottom:0;
+  width:100%;
 }
+
 #input input{
-  flex:1;
-  padding:10px;
+  width:100%;
+  padding:15px;
   border:none;
-  border-radius:0 0 0 20px;
-}
-
-/* SIDEBAR */
-.sidebar{
-  position:absolute;
-  left:20px;
-  top:50%;
-  transform:translateY(-50%);
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.room{
-  padding:10px;
-  background:#111;
-  border-radius:10px;
-  cursor:pointer;
-}
-
-.add{
-  width:40px;height:40px;
-  border-radius:50%;
-  background:#ff0077;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-}
-
-/* SETTINGS */
-#settings{
-  position:absolute;
-  right:20px;
-  top:20px;
-  background:#111;
-  padding:10px;
-  border-radius:10px;
-  display:none;
 }
 
 /* CURSOR */
@@ -134,7 +96,8 @@ body{
 /* BG */
 canvas{
   position:fixed;
-  top:0;left:0;
+  top:0;
+  left:0;
   z-index:-1;
 }
 </style>
@@ -142,24 +105,18 @@ canvas{
 
 <body>
 
-<div class="container">
-
 <div id="login">
   <h1 class="title">WELCOME TO NEURO-CHAT!</h1>
   <p>made by zay :)</p>
-
-  <input id="user" placeholder="Username">
+  <input id="user" placeholder="username"><br><br>
   <button onclick="join()">Join</button>
 </div>
 
-<div id="chat" style="display:none">
+<div id="chat">
 
-<div class="top">
+<div id="top">
   <span id="me"></span>
-  <div>
-    <button onclick="toggleSettings()">⚙️</button>
-    <button onclick="logout()">Logout</button>
-  </div>
+  <button onclick="logout()">Logout</button>
 </div>
 
 <div id="messages"></div>
@@ -170,19 +127,6 @@ canvas{
 
 </div>
 
-</div>
-
-<div class="sidebar">
-  <div class="room" onclick="switchRoom('main')">Main</div>
-  <div id="groups"></div>
-  <div class="add" onclick="createGroup()">+</div>
-</div>
-
-<div id="settings">
-  <input type="color" onchange="bgColor=this.value">
-  <input type="color" onchange="particleColor=this.value">
-</div>
-
 <div class="cursor" id="cursor"></div>
 <canvas id="bg"></canvas>
 
@@ -191,19 +135,17 @@ firebase.initializeApp({
   apiKey:"AIzaSy...",
   databaseURL:"https://neuro-chat-8fe18-default-rtdb.firebaseio.com"
 });
+
 const db=firebase.database();
-
 let user="";
-let room="main";
-let particleColor="#fff";
 
-// USER SYSTEM
+// JOIN
 function join(){
   let name=document.getElementById("user").value;
 
   db.ref("users/"+name).once("value").then(s=>{
     if(s.exists() && localStorage.getItem("user")!==name){
-      alert("username taken try again");
+      alert("username taken");
       return;
     }
 
@@ -214,72 +156,43 @@ function join(){
   });
 }
 
+// AUTO LOGIN
 if(localStorage.getItem("user")){
   user=localStorage.getItem("user");
   start();
 }
 
+// START
 function start(){
   document.getElementById("login").style.display="none";
   document.getElementById("chat").style.display="block";
   document.getElementById("me").innerText=user;
-
   load();
-  loadGroups();
 }
 
 // SEND
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter"){
     let t=document.getElementById("msg").value;
-    db.ref("rooms/"+room).push({user,text:t});
+    if(!t)return;
+
+    db.ref("chat").push({user,text:t});
     document.getElementById("msg").value="";
   }
 });
 
 // LOAD
 function load(){
-  db.ref("rooms/"+room).on("value",snap=>{
+  db.ref("chat").on("value",snap=>{
     let box=document.getElementById("messages");
     box.innerHTML="";
-    let data=snap.val();
 
+    let data=snap.val();
     for(let id in data){
       let m=data[id];
       box.innerHTML+=`<div class="msg"><b>${m.user}</b>: ${m.text}</div>`;
     }
   });
-}
-
-// GROUPS
-function createGroup(){
-  let name=prompt("Group name:");
-  if(!name)return;
-  let id="g_"+Date.now();
-  db.ref("groups/"+id).set({name});
-}
-
-function loadGroups(){
-  db.ref("groups").on("value",snap=>{
-    let box=document.getElementById("groups");
-    box.innerHTML="";
-    let data=snap.val();
-
-    for(let id in data){
-      box.innerHTML+=`<div class="room" onclick="switchRoom('${id}')">${data[id].name}</div>`;
-    }
-  });
-}
-
-function switchRoom(r){
-  room=r;
-  load();
-}
-
-// SETTINGS
-function toggleSettings(){
-  let s=document.getElementById("settings");
-  s.style.display=s.style.display==="block"?"none":"block";
 }
 
 // LOGOUT
@@ -295,14 +208,15 @@ document.addEventListener("mousemove",e=>{
   cursor.style.top=e.clientY+"px";
 });
 
-// BG
+// BG PARTICLES
 const canvas=document.getElementById("bg");
 const ctx=canvas.getContext("2d");
+
 canvas.width=innerWidth;
 canvas.height=innerHeight;
 
 let particles=[];
-for(let i=0;i<100;i++){
+for(let i=0;i<120;i++){
   particles.push({
     x:Math.random()*canvas.width,
     y:Math.random()*canvas.height,
@@ -318,9 +232,12 @@ function animate(){
     p.x+=p.vx;
     p.y+=p.vy;
 
+    if(p.x<0||p.x>canvas.width)p.vx*=-1;
+    if(p.y<0||p.y>canvas.height)p.vy*=-1;
+
     ctx.beginPath();
     ctx.arc(p.x,p.y,2,0,Math.PI*2);
-    ctx.fillStyle=particleColor;
+    ctx.fillStyle="#fff";
     ctx.fill();
   });
 
