@@ -5,95 +5,131 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Astro Chat</title>
 
-<!-- Firebase (WORKING VERSION) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+<!-- Font + Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
 <style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
 body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: linear-gradient(-45deg, #0f0f0f, #1a1a2e, #16213e, #0f3460);
-  background-size: 400% 400%;
-  animation: bg 10s ease infinite;
-  color: white;
-  cursor: url('https://cur.cursors-4u.net/cursors/cur-2/cur116.cur'), auto;
+  font-family:'Poppins', sans-serif;
+  background:#0f0f0f;
+  color:white;
+  overflow:hidden;
+  height:100vh;
+  cursor:none;
 }
 
-@keyframes bg {
-  0% {background-position: 0% 50%;}
-  50% {background-position: 100% 50%;}
-  100% {background-position: 0% 50%;}
-}
-
+/* LOGIN */
 #login {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  text-align:center;
+  z-index:2;
 }
 
+/* CHAT */
 #chatUI {
-  display: none;
-  height: 100vh;
+  display:none;
+  z-index:2;
+  position:relative;
 }
 
 #messages {
-  height: 80vh;
-  overflow-y: auto;
-  padding: 20px;
+  height:80vh;
+  overflow-y:auto;
+  padding:20px;
 }
 
-.message {
-  margin: 5px 0;
-}
+.message { margin:5px 0; }
 
 .owner {
-  color: #ff4d6d;
-  font-weight: bold;
+  color:#ff4d6d;
+  font-weight:bold;
 }
 
 #inputBox {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  display: flex;
+  position:fixed;
+  bottom:0;
+  width:100%;
+  display:flex;
 }
 
 #inputBox input {
-  flex: 1;
-  padding: 10px;
-  border: none;
+  flex:1;
+  padding:12px;
+  border:none;
+  outline:none;
 }
 
 button {
-  background: #ff4d6d;
-  border: none;
-  padding: 10px 15px;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.2s;
+  background:linear-gradient(90deg,#ff00ff,#ff0077);
+  border:none;
+  padding:12px 20px;
+  color:white;
+  cursor:pointer;
+  border-radius:8px;
 }
 
 button:hover {
-  transform: scale(1.05);
-  background: #ff1e4d;
+  transform:scale(1.05);
 }
 
+/* YOUTUBE ICON */
 #side {
-  position: fixed;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+  position:fixed;
+  right:20px;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:2;
 }
 
+#side a {
+  font-size:30px;
+  color:red;
+}
+
+#side a:hover {
+  transform:scale(1.2);
+  text-shadow:0 0 10px red;
+}
+
+/* ADMIN */
 #admin {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  display: none;
+  position:fixed;
+  top:10px;
+  left:10px;
+  display:none;
+  z-index:2;
+}
+
+/* CUSTOM CURSOR */
+.cursor {
+  position:absolute;
+  width:10px;
+  height:10px;
+  background:#fff;
+  border-radius:50%;
+  pointer-events:none;
+  mix-blend-mode:difference;
+  z-index:3;
+}
+
+/* PARTICLES */
+canvas {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:1;
 }
 </style>
 </head>
@@ -102,7 +138,7 @@ button:hover {
 
 <div id="login">
   <h2>Enter Username</h2>
-  <input id="username" placeholder="username">
+  <input id="username">
   <button onclick="enterChat()">Join</button>
 </div>
 
@@ -115,15 +151,21 @@ button:hover {
   </div>
 
   <div id="side">
-    <a href="https://youtube.com/@zay-bear-185" target="_blank">My YouTube</a>
+    <a href="https://youtube.com/@zay-bear-185" target="_blank">
+      <i class="fab fa-youtube"></i>
+    </a>
   </div>
 
   <div id="admin">
-    <button onclick="clearChat()">Clear Chat</button>
+    <button onclick="clearChat()">Clear</button>
   </div>
 </div>
 
+<div class="cursor" id="cursor"></div>
+<canvas id="bg"></canvas>
+
 <script>
+// FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyC-tWfooosC689hzDUC4S5CXL7dJ3yANuc",
   authDomain: "neuro-chat-8fe18.firebaseapp.com",
@@ -139,7 +181,6 @@ const db = firebase.database();
 
 let user = "";
 let owner = "zay";
-let mutedUsers = {};
 
 function enterChat() {
   user = document.getElementById("username").value;
@@ -159,11 +200,6 @@ function enterChat() {
 function sendMsg() {
   let text = document.getElementById("msg").value;
   if (!text) return;
-
-  if (mutedUsers[user]) {
-    alert("You are muted");
-    return;
-  }
 
   db.ref("messages").push({
     user: user,
@@ -194,13 +230,6 @@ function loadMessages() {
     }
 
     container.scrollTop = container.scrollHeight;
-    updateCount();
-  });
-}
-
-function updateCount() {
-  db.ref("users").once("value", snap => {
-    document.title = "Users: " + snap.numChildren();
   });
 }
 
@@ -208,10 +237,50 @@ function clearChat() {
   db.ref("messages").remove();
 }
 
-function muteUser(name) {
-  mutedUsers[name] = true;
-  alert(name + " muted");
+// CUSTOM CURSOR
+const cursor = document.getElementById("cursor");
+document.addEventListener("mousemove", e => {
+  cursor.style.left = e.clientX + "px";
+  cursor.style.top = e.clientY + "px";
+});
+
+// PARTICLES
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let particles = [];
+for (let i = 0; i < 100; i++) {
+  particles.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: (Math.random() - 0.5) * 0.5,
+    size: Math.random() * 2 + 1
+  });
 }
+
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+
+    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  requestAnimationFrame(animate);
+}
+animate();
 </script>
 
 </body>
