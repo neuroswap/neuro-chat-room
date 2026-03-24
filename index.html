@@ -17,13 +17,53 @@ body{
   cursor:none;
 }
 
+/* TITLE */
+.title{
+  font-size:3rem;
+  text-align:center;
+  background:linear-gradient(90deg,#ff00ff,#00ffff,#ff0077);
+  -webkit-background-clip:text;
+  color:transparent;
+  text-shadow:0 0 20px #ff00ff;
+  animation:shine 4s linear infinite;
+}
+.subtitle{
+  text-align:center;
+  color:#aaa;
+  margin-bottom:20px;
+}
+
+@keyframes shine{
+  0%{filter:hue-rotate(0)}
+  100%{filter:hue-rotate(360deg)}
+}
+
+/* TOP BAR */
+#topBar{
+  position:fixed;
+  top:0;
+  width:100%;
+  background:#111;
+  display:flex;
+  justify-content:space-between;
+  padding:10px;
+  z-index:5;
+}
+
+button{
+  background:#ff0077;
+  border:none;
+  color:white;
+  padding:6px 10px;
+  border-radius:6px;
+}
+
 /* LOGIN */
 #login{
   position:absolute;
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
-  text-align:center;
 }
 
 /* SIDEBAR */
@@ -31,54 +71,36 @@ body{
   width:160px;
   background:#111;
   height:100%;
+  padding-top:60px;
   float:left;
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
 }
 
-.room{
-  padding:10px;
-  border-radius:8px;
-  cursor:pointer;
-}
+.room{padding:10px;cursor:pointer}
 .room:hover{background:#222}
 
 .addGroup{
-  margin-top:auto;
-  width:40px;
-  height:40px;
+  margin:10px;
+  width:40px;height:40px;
   border-radius:50%;
   background:#ff0077;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:24px;
+  display:flex;align-items:center;justify-content:center;
   cursor:pointer;
 }
 
 /* MAIN */
 #main{
   margin-left:160px;
-}
-
-#top{
-  padding:10px;
-  background:#111;
-  display:flex;
-  justify-content:space-between;
+  margin-top:50px;
 }
 
 #messages{
-  height:75vh;
+  height:70vh;
   overflow:auto;
   padding:10px;
 }
 
 .msg{
   display:flex;
-  align-items:center;
   gap:10px;
   background:#1a1a1a;
   margin:5px;
@@ -106,6 +128,26 @@ body{
   border:none;
 }
 
+/* ADMIN PANEL */
+#adminPanel{
+  position:fixed;
+  right:10px;
+  top:70px;
+  background:#111;
+  padding:10px;
+  display:none;
+}
+
+/* SETTINGS */
+#settings{
+  position:fixed;
+  right:10px;
+  top:150px;
+  background:#111;
+  padding:10px;
+  display:none;
+}
+
 /* CURSOR */
 .cursor{
   position:absolute;
@@ -115,16 +157,13 @@ body{
   border-radius:50%;
   pointer-events:none;
   mix-blend-mode:difference;
-  z-index:999;
 }
 
 /* BG */
 canvas{
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  top:0;left:0;
+  width:100%;height:100%;
   z-index:-1;
 }
 </style>
@@ -133,12 +172,22 @@ canvas{
 <body>
 
 <div id="login">
-  <h2>Neuro Chat</h2>
-  <input id="user" placeholder="Username"><br>
+  <h1 class="title">WELCOME TO NEURO-CHAT!</h1>
+  <p class="subtitle">made by zay :)</p>
+  <input id="user"><br>
   <button onclick="join()">Join</button>
 </div>
 
 <div id="chat" style="display:none">
+
+<div id="topBar">
+  <div>
+    <button onclick="switchRoom('main')">Home</button>
+    <button onclick="toggleSettings()">⚙️</button>
+  </div>
+  <div id="me"></div>
+  <button onclick="logout()">Logout</button>
+</div>
 
 <div id="rooms">
   <div class="room" onclick="switchRoom('main')">Main Group</div>
@@ -147,20 +196,27 @@ canvas{
 </div>
 
 <div id="main">
-
-<div id="top">
-  <span id="me"></span>
-  <button onclick="logout()">Logout</button>
-</div>
-
-<div id="messages"></div>
-
+  <div id="messages"></div>
 </div>
 
 <div id="input">
-  <input id="msg" placeholder="type and press enter">
+  <input id="msg" placeholder="press enter to send">
 </div>
 
+</div>
+
+<div id="adminPanel">
+  <h4>Admin</h4>
+  <input id="target"><br>
+  <button onclick="ban()">Ban</button>
+  <button onclick="mute()">Mute</button>
+  <button onclick="clearChat()">Clear</button>
+</div>
+
+<div id="settings">
+  <h4>Theme</h4>
+  <input type="color" onchange="bgColor=this.value">
+  <input type="color" onchange="particleColor=this.value">
 </div>
 
 <div class="cursor" id="cursor"></div>
@@ -171,11 +227,11 @@ firebase.initializeApp({
   apiKey:"AIzaSy...",
   databaseURL:"https://neuro-chat-8fe18-default-rtdb.firebaseio.com"
 });
-
 const db=firebase.database();
 
 let user="";
 let currentRoom="main";
+let particleColor="#fff";
 
 // FONT
 function toFullWidth(str){
@@ -185,106 +241,81 @@ function toFullWidth(str){
   });
 }
 
-// AUTO LOGIN
-if(localStorage.getItem("user")){
-  user=localStorage.getItem("user");
-  start();
-}
-
+// JOIN
 function join(){
   user=toFullWidth(document.getElementById("user").value);
-  if(!user)return;
-
   localStorage.setItem("user",user);
   start();
 }
 
+// START
 function start(){
+  user=localStorage.getItem("user");
   document.getElementById("login").style.display="none";
   document.getElementById("chat").style.display="block";
   document.getElementById("me").innerText=user;
+
+  // ADMIN FIX
+  if(user==="ｚａｙ　（ｎｅｕｒｏ）" || user==="zay (neuro)"){
+    document.getElementById("adminPanel").style.display="block";
+  }
 
   load();
   loadGroups();
 }
 
-function logout(){
-  localStorage.removeItem("user");
-  location.reload();
-}
-
-// ENTER SEND
-document.addEventListener("keydown",e=>{
-  if(e.key==="Enter") send();
-});
-
 // SEND
-function send(){
-  let text=document.getElementById("msg").value;
-  if(!text)return;
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"){
+    let text=toFullWidth(document.getElementById("msg").value);
 
-  text=toFullWidth(text);
+    if(text.startsWith("／ｄｍ")){
+      let parts=text.split(" ");
+      let t=parts[1];
+      let m=parts.slice(2).join(" ");
 
-  if(text.startsWith("／ｄｍ")){
-    let parts=text.split(" ");
-    let target=parts[1];
-    let msg=parts.slice(2).join(" ");
+      db.ref("dms/"+user+"_"+t).push({user,text:m});
+      db.ref("dms/"+t+"_"+user).push({user,text:m});
+    }else{
+      db.ref("rooms/"+currentRoom).push({user,text});
+    }
 
-    db.ref("dms/"+user+"_"+target).push({user,text:"(DM) "+msg});
-    db.ref("dms/"+target+"_"+user).push({user,text:"(DM) "+msg});
-  }else{
-    db.ref("rooms/"+currentRoom).push({user,text});
+    document.getElementById("msg").value="";
   }
-
-  document.getElementById("msg").value="";
-}
+});
 
 // LOAD
 function load(){
   db.ref("rooms/"+currentRoom).on("value",snap=>{
     let box=document.getElementById("messages");
     box.innerHTML="";
-
     let data=snap.val();
+
     for(let id in data){
       let m=data[id];
-
       box.innerHTML+=`
       <div class="msg">
-        <img src="https://api.dicebear.com/7.x/initials/svg?seed=${m.user}" onclick="startDM('${m.user}')">
+        <img src="https://api.dicebear.com/7.x/initials/svg?seed=${m.user}" onclick="dm('${m.user}')">
         <b>${m.user}</b>: ${m.text}
       </div>`;
     }
-
-    box.scrollTop=box.scrollHeight;
   });
 }
 
 // DM CLICK
-function startDM(target){
-  document.getElementById("msg").value="／ｄｍ "+target+" ";
+function dm(u){
+  document.getElementById("msg").value="／ｄｍ "+u+" ";
 }
 
 // GROUPS
 function createGroup(){
   db.ref("userGroups/"+user).once("value").then(s=>{
-    if(s.exists()){
-      alert("you already made a group");
-      return;
-    }
+    if(s.exists()) return alert("1 group only");
 
-    let name=prompt("Group name:");
-    if(!name)return;
-
-    name=toFullWidth(name);
-
+    let name=toFullWidth(prompt("name"));
     let id="group_"+Date.now();
 
-    db.ref("groups/"+id).set({
-      name,
-      owner:user
-    });
-
+    db.ref("groups/"+id).set({name,owner:user});
     db.ref("userGroups/"+user).set(id);
   });
 }
@@ -293,31 +324,48 @@ function loadGroups(){
   db.ref("groups").on("value",snap=>{
     let box=document.getElementById("groups");
     box.innerHTML="";
-
     let data=snap.val();
+
     for(let id in data){
       let g=data[id];
-
       box.innerHTML+=`
       <div class="room" onclick="switchRoom('${id}')">
         ${g.name}
-        ${g.owner===user ? `<span onclick="deleteGroup('${id}')"> ❌</span>` : ""}
+        ${g.owner===user?`❌`:``}
       </div>`;
     }
   });
 }
 
-function deleteGroup(id){
-  db.ref("groups/"+id).remove();
-  db.ref("rooms/"+id).remove();
-  db.ref("userGroups/"+user).remove();
-  switchRoom("main");
+// ADMIN
+function ban(){
+  let t=document.getElementById("target").value;
+  db.ref("banned/"+t).set(true);
+}
+function mute(){
+  let t=document.getElementById("target").value;
+  db.ref("muted/"+t).set(true);
+}
+function clearChat(){
+  db.ref("rooms/"+currentRoom).remove();
 }
 
 // SWITCH
 function switchRoom(r){
   currentRoom=r;
   load();
+}
+
+// SETTINGS
+function toggleSettings(){
+  let s=document.getElementById("settings");
+  s.style.display=s.style.display==="block"?"none":"block";
+}
+
+// LOGOUT
+function logout(){
+  localStorage.removeItem("user");
+  location.reload();
 }
 
 // CURSOR
@@ -339,8 +387,7 @@ for(let i=0;i<120;i++){
     x:Math.random()*canvas.width,
     y:Math.random()*canvas.height,
     vx:(Math.random()-0.5)*0.5,
-    vy:(Math.random()-0.5)*0.5,
-    size:Math.random()*2
+    vy:(Math.random()-0.5)*0.5
   });
 }
 
@@ -355,8 +402,8 @@ function animate(){
     if(p.y<0||p.y>canvas.height)p.vy*=-1;
 
     ctx.beginPath();
-    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
-    ctx.fillStyle="#fff";
+    ctx.arc(p.x,p.y,2,0,Math.PI*2);
+    ctx.fillStyle=particleColor;
     ctx.fill();
   });
 
